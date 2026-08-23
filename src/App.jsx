@@ -1,15 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
-import { flattenedPrefectures, regionalPrefectureData } from './data/prefectureData'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { flattenedPrefectures } from './data/prefectureData.js'
+import { Header } from './components/Header.jsx'
+import { PrefectureHero } from './components/PrefectureHero.jsx'
+import { JapanMap } from './components/JapanMap.jsx'
+import { ItineraryPanel } from './components/ItineraryPanel.jsx'
+import { TravelToolkit } from './components/TravelToolkit.jsx'
+import { StampBook } from './components/StampBook.jsx'
+import { BookmarksPanel } from './components/BookmarksPanel.jsx'
+import { ExportModal } from './components/ExportModal.jsx'
+import { ParticleCanvas } from './components/ParticleCanvas.jsx'
 
-const seasons = ['spring', 'summer', 'autumn', 'winter']
-const seasonLabel = {
-  spring: 'Spring',
-  summer: 'Summer',
-  autumn: 'Autumn',
-  winter: 'Winter',
-}
+const bookmarkKey = 'omotenashi.concierge.bookmarks.v2'
+const stampsKey = 'omotenashi.concierge.stamps.v2'
 
-const currentSeason = () => {
+const getCurrentSeason = () => {
   const month = new Date().getMonth() + 1
   if (month >= 3 && month <= 5) return 'spring'
   if (month >= 6 && month <= 8) return 'summer'
@@ -17,35 +21,24 @@ const currentSeason = () => {
   return 'winter'
 }
 
-const buildTimeline = (prefecture, season) => {
-  const data = prefecture.seasonal[season]
-  return [
-    {
-      day: 'Day 1',
-      theme: 'Taste Local Flavors',
-      items: data.foods,
-      color: 'from-rose-400 to-orange-300',
-    },
-    {
-      day: 'Day 2',
-      theme: 'Discover Heritage',
-      items: data.historicalSites,
-      color: 'from-sky-400 to-cyan-300',
-    },
-    {
-      day: 'Day 3',
-      theme: 'Celebrate Culture',
-      items: data.festivals,
-      color: 'from-violet-500 to-fuchsia-400',
-    },
-  ]
-}
+export default function App() {
+  const [selectedSeason, setSelectedSeason] = useState(getCurrentSeason)
+  const [selectedPrefectureId, setSelectedPrefectureId] = useState(() => {
+    // Check URL hash for direct prefecture links (e.g. #kyoto)
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.replace('#', '').toLowerCase()
+      if (hash && flattenedPrefectures.some((p) => p.id === hash)) {
+        return hash
+      }
+    }
+    return 'tokyo' // default to Tokyo
+  })
 
-const bookmarkKey = 'omotenashi.concierge.bookmarks.v1'
+  const [activeTab, setActiveTab] = useState('map') // 'map' | 'toolkit' | 'stamps' | 'bookmarks'
+  const [isExportOpen, setIsExportOpen] = useState(false)
+  const [particlesEnabled] = useState(true)
 
-function App() {
-  const [selectedSeason, setSelectedSeason] = useState(currentSeason())
-  const [selectedPrefectureId, setSelectedPrefectureId] = useState(flattenedPrefectures[0].id)
+  // LocalStorage Bookmarks
   const [bookmarks, setBookmarks] = useState(() => {
     try {
       const saved = localStorage.getItem(bookmarkKey)
@@ -55,185 +48,214 @@ function App() {
     }
   })
 
+  // LocalStorage Goshuin Stamps
+  const [stampedIds, setStampedIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem(stampsKey)
+      return saved ? JSON.parse(saved) : ['tokyo', 'kyoto'] // starter stamps
+    } catch {
+      return ['tokyo', 'kyoto']
+    }
+  })
+
+  // Save to LocalStorage
   useEffect(() => {
-    localStorage.setItem(bookmarkKey, JSON.stringify(bookmarks))
+    try {
+      localStorage.setItem(bookmarkKey, JSON.stringify(bookmarks))
+    } catch (e) {
+      console.warn('LocalStorage error for bookmarks:', e)
+    }
   }, [bookmarks])
 
-  const selectedPrefecture = useMemo(
-    () => flattenedPrefectures.find((prefecture) => prefecture.id === selectedPrefectureId),
-    [selectedPrefectureId],
-  )
+  useEffect(() => {
+    try {
+      localStorage.setItem(stampsKey, JSON.stringify(stampedIds))
+    } catch (e) {
+      console.warn('LocalStorage error for stamps:', e)
+    }
+  }, [stampedIds])
 
-  const timeline = selectedPrefecture
-    ? buildTimeline(selectedPrefecture, selectedSeason)
-    : []
+  // Sync URL hash when prefecture changes
+  useEffect(() => {
+    if (selectedPrefectureId) {
+      window.history.replaceState(null, '', `#${selectedPrefectureId}`)
+    }
+  }, [selectedPrefectureId])
 
-  const itinerary = {
-    prefectureId: selectedPrefecture.id,
-    prefectureName: selectedPrefecture.name,
-    region: selectedPrefecture.region,
-    season: selectedSeason,
-    timeline,
-  }
-
-  const isBookmarked = bookmarks.some(
-    (item) => item.prefectureId === itinerary.prefectureId && item.season === itinerary.season,
-  )
-
-  const saveBookmark = () => {
-    if (isBookmarked) return
-    setBookmarks((prev) => [itinerary, ...prev])
-  }
-
-  const removeBookmark = (prefectureId, season) => {
-    setBookmarks((prev) =>
-      prev.filter((item) => !(item.prefectureId === prefectureId && item.season === season)),
+  // Current selected prefecture object
+  const selectedPrefecture = useMemo(() => {
+    return (
+      flattenedPrefectures.find((p) => p.id === selectedPrefectureId) ||
+      flattenedPrefectures[0]
     )
-  }
+  }, [selectedPrefectureId])
+
+  // Check if current view is bookmarked
+  const isCurrentBookmarked = useMemo(() => {
+    return bookmarks.some(
+      (b) => b.prefectureId === selectedPrefecture.id && b.season === selectedSeason,
+    )
+  }, [bookmarks, selectedPrefecture.id, selectedSeason])
+
+  const isCurrentStamped = useMemo(() => {
+    return stampedIds.includes(selectedPrefecture.id)
+  }, [stampedIds, selectedPrefecture.id])
+
+  // Handlers
+  const handleToggleBookmark = useCallback(() => {
+    if (isCurrentBookmarked) {
+      setBookmarks((prev) =>
+        prev.filter(
+          (b) => !(b.prefectureId === selectedPrefecture.id && b.season === selectedSeason),
+        ),
+      )
+    } else {
+      const newBookmark = {
+        prefectureId: selectedPrefecture.id,
+        prefectureName: selectedPrefecture.name,
+        region: selectedPrefecture.region,
+        season: selectedSeason,
+        savedAt: new Date().toISOString(),
+      }
+      setBookmarks((prev) => [newBookmark, ...prev])
+    }
+  }, [isCurrentBookmarked, selectedPrefecture, selectedSeason])
+
+  const handleRemoveBookmark = useCallback((prefId, season) => {
+    setBookmarks((prev) =>
+      prev.filter((b) => !(b.prefectureId === prefId && b.season === season)),
+    )
+  }, [])
+
+  const handleClearAllBookmarks = useCallback(() => {
+    setBookmarks([])
+  }, [])
+
+  const handleToggleStamp = useCallback((prefId) => {
+    setStampedIds((prev) => {
+      if (prev.includes(prefId)) {
+        return prev.filter((id) => id !== prefId)
+      } else {
+        return [...prev, prefId]
+      }
+    })
+  }, [])
+
+  const handleSelectPrefecture = useCallback((prefId) => {
+    setSelectedPrefectureId(prefId)
+    setActiveTab('map') // Automatically switch to map/guide view
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
+  const seasonClass = `season-${selectedSeason}`
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <header className="rounded-2xl border border-white/10 bg-gradient-to-r from-indigo-900/70 via-slate-900 to-emerald-900/60 p-5 shadow-2xl sm:p-8">
-          <p className="text-xs uppercase tracking-[0.28em] text-emerald-200">Omotenashi Concierge</p>
-          <h1 className="mt-2 text-3xl font-bold leading-tight sm:text-4xl">Plan authentic 3-day journeys across all 47 prefectures</h1>
-          <p className="mt-3 max-w-3xl text-sm text-slate-300 sm:text-base">Tap any prefecture on the interactive Japan map to instantly generate a seasonal timeline of foods, heritage sites, and festivals.</p>
-        </header>
+    <div className={`min-h-screen bg-slate-950 text-slate-100 relative selection:bg-rose-500/30 selection:text-rose-100 ${seasonClass}`}>
+      {/* Background seasonal particles */}
+      <ParticleCanvas season={selectedSeason} enabled={particlesEnabled} />
 
-        <section className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-          <article className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 sm:p-6">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Interactive prefecture map</h2>
-              <div className="flex gap-2">
-                {seasons.map((season) => (
-                  <button
-                    key={season}
-                    type="button"
-                    onClick={() => setSelectedSeason(season)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                      selectedSeason === season
-                        ? 'bg-emerald-400 text-slate-900'
-                        : 'bg-slate-700/70 text-slate-200 hover:bg-slate-600'
-                    }`}
-                  >
-                    {seasonLabel[season]}
-                  </button>
-                ))}
+      {/* Main Sticky Header */}
+      <Header
+        activeSeason={selectedSeason}
+        onSeasonChange={setSelectedSeason}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        prefectures={flattenedPrefectures}
+        onSelectPrefecture={handleSelectPrefecture}
+        bookmarksCount={bookmarks.length}
+        stampsCount={stampedIds.length}
+      />
+
+      {/* Page Content Body */}
+      <main className="relative z-10 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6">
+        {activeTab === 'map' && (
+          <>
+            {/* Prefecture Hero Spotlight */}
+            <PrefectureHero
+              prefecture={selectedPrefecture}
+              activeSeason={selectedSeason}
+              isBookmarked={isCurrentBookmarked}
+              onToggleBookmark={handleToggleBookmark}
+              onOpenExport={() => setIsExportOpen(true)}
+              isStamped={isCurrentStamped}
+              onToggleStamp={handleToggleStamp}
+            />
+
+            {/* 2-Column Layout: Interactive Map on Left, Itinerary Timeline on Right */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Column: Interactive Map */}
+              <div className="lg:col-span-6 space-y-4">
+                <JapanMap
+                  prefectures={flattenedPrefectures}
+                  selectedPrefectureId={selectedPrefectureId}
+                  onSelectPrefecture={handleSelectPrefecture}
+                  stampedIds={stampedIds}
+                />
+              </div>
+
+              {/* Right Column: Detailed Itinerary Panel */}
+              <div className="lg:col-span-6 space-y-4">
+                <ItineraryPanel
+                  prefecture={selectedPrefecture}
+                  activeSeason={selectedSeason}
+                  isBookmarked={isCurrentBookmarked}
+                  onToggleBookmark={handleToggleBookmark}
+                  onOpenExport={() => setIsExportOpen(true)}
+                />
               </div>
             </div>
+          </>
+        )}
 
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-950/60 p-2 sm:p-4">
-              <svg viewBox="0 0 820 560" className="h-auto w-full" role="img" aria-label="Japan prefecture map">
-                {Object.entries(regionalPrefectureData).map(([region, prefectures]) => (
-                  <g key={region}>
-                    {prefectures.map((prefecture) => {
-                      const active = selectedPrefectureId === prefecture.id
-                      return (
-                        <g key={prefecture.id}>
-                          <rect
-                            x={prefecture.map.x}
-                            y={prefecture.map.y}
-                            width={prefecture.map.w}
-                            height={prefecture.map.h}
-                            rx="10"
-                            onClick={() => setSelectedPrefectureId(prefecture.id)}
-                            className={`cursor-pointer transition ${
-                              active ? 'fill-emerald-400 stroke-emerald-200' : 'fill-slate-700 stroke-slate-400 hover:fill-slate-600'
-                            }`}
-                            strokeWidth="1.2"
-                          />
-                          <text
-                            x={prefecture.map.x + prefecture.map.w / 2}
-                            y={prefecture.map.y + prefecture.map.h / 2 + 4}
-                            textAnchor="middle"
-                            className={`pointer-events-none text-[10px] sm:text-xs ${active ? 'fill-slate-900' : 'fill-slate-100'}`}
-                          >
-                            {prefecture.name}
-                          </text>
-                        </g>
-                      )
-                    })}
-                    <text
-                      x={prefectures[0].map.x}
-                      y={prefectures[0].map.y - 8}
-                      className="fill-slate-400 text-[10px] uppercase tracking-wider"
-                    >
-                      {region}
-                    </text>
-                  </g>
-                ))}
-              </svg>
-            </div>
-          </article>
+        {/* Tab 2: Travel Toolkit */}
+        {activeTab === 'toolkit' && <TravelToolkit />}
 
-          <article className="rounded-2xl border border-white/10 bg-slate-900/70 p-4 sm:p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">{selectedPrefecture.region}</p>
-                <h2 className="mt-1 text-2xl font-bold">{selectedPrefecture.name}</h2>
-                <p className="text-sm text-slate-300">{seasonLabel[selectedSeason]} itinerary</p>
-              </div>
-              <button
-                type="button"
-                onClick={saveBookmark}
-                disabled={isBookmarked}
-                className="rounded-lg bg-emerald-400 px-3 py-2 text-xs font-bold text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-200"
-              >
-                {isBookmarked ? 'Bookmarked' : 'Bookmark'}
-              </button>
-            </div>
+        {/* Tab 3: Goshuincho Stamp Rally */}
+        {activeTab === 'stamps' && (
+          <StampBook
+            prefectures={flattenedPrefectures}
+            stampedIds={stampedIds}
+            onToggleStamp={handleToggleStamp}
+            onSelectPrefecture={handleSelectPrefecture}
+          />
+        )}
 
-            <ol className="mt-5 space-y-4">
-              {timeline.map((dayPlan) => (
-                <li key={dayPlan.day} className="rounded-xl border border-white/10 bg-slate-950/70 p-4">
-                  <div className={`inline-flex rounded-full bg-gradient-to-r px-3 py-1 text-xs font-bold text-slate-900 ${dayPlan.color}`}>
-                    {dayPlan.day}
-                  </div>
-                  <h3 className="mt-2 text-lg font-semibold">{dayPlan.theme}</h3>
-                  <ul className="mt-2 space-y-1 text-sm text-slate-300">
-                    {dayPlan.items.map((item) => (
-                      <li key={item} className="flex items-start gap-2">
-                        <span className="mt-1 size-1.5 rounded-full bg-emerald-300"></span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ol>
-          </article>
-        </section>
+        {/* Tab 4: Bookmarks & Saved Itineraries */}
+        {activeTab === 'bookmarks' && (
+          <BookmarksPanel
+            bookmarks={bookmarks}
+            onRemoveBookmark={handleRemoveBookmark}
+            onClearAll={handleClearAllBookmarks}
+            onSelectPrefecture={handleSelectPrefecture}
+            onSeasonChange={setSelectedSeason}
+            onOpenExport={() => setIsExportOpen(true)}
+          />
+        )}
+      </main>
 
-        <section className="mt-6 rounded-2xl border border-white/10 bg-slate-900/70 p-4 sm:p-6">
-          <h2 className="text-lg font-semibold">Saved itineraries ({bookmarks.length})</h2>
-          {bookmarks.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-300">No bookmarks yet. Save your favorite prefecture plans to keep them in this browser.</p>
-          ) : (
-            <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-              {bookmarks.map((bookmark) => (
-                <li key={`${bookmark.prefectureId}-${bookmark.season}`} className="rounded-xl border border-white/10 bg-slate-950/60 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-xs uppercase tracking-wider text-emerald-300">{bookmark.region}</p>
-                      <p className="font-semibold">{bookmark.prefectureName}</p>
-                      <p className="text-xs text-slate-300">{seasonLabel[bookmark.season]} · 3 days</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeBookmark(bookmark.prefectureId, bookmark.season)}
-                      className="text-xs text-rose-300 hover:text-rose-200"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
-    </main>
+      {/* Export & Sharing Modal */}
+      <ExportModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        prefecture={selectedPrefecture}
+        activeSeason={selectedSeason}
+        itineraryDays={[]}
+      />
+
+      {/* Footer */}
+      <footer className="mt-16 border-t border-white/10 glass-panel py-8 px-4 text-center text-xs text-slate-400 space-y-2 relative z-10 no-print">
+        <div className="flex items-center justify-center gap-2">
+          <span className="font-serif-jp text-rose-400 font-bold text-sm">一期一会</span>
+          <span className="text-slate-500">·</span>
+          <span>Ichigo Ichie — Treasure Every Unrepeatable Encounter</span>
+        </div>
+        <p className="max-w-md mx-auto text-slate-400">
+          Crafted with genuine Omotenashi (Japanese hospitality) spirit. Comprehensive authentic data for all 47 prefectures of Japan.
+        </p>
+        <p className="text-slate-400 pt-2 text-[11px]">
+          © {new Date().getFullYear()} Omotenashi Concierge · Japan Tourism & Cultural Travel Companion
+        </p>
+      </footer>
+    </div>
   )
 }
-
-export default App

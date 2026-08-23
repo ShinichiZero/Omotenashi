@@ -1,0 +1,268 @@
+/* =========================================================
+   Glass & Surface Styles
+   ========================================================= */
+
+.glass-panel {
+  background: rgba(11, 17, 32, 0.72);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 12px 36px -8px rgba(0, 0, 0, 0.5);
+}
+
+.glass-card {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  background: rgba(22, 33, 58, 0.8);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-2px);
+  box-shadow:
+    0 16px 32px -10px rgba(0, 0, 0, 0.45),
+    0 0 15px -3px var(--season-glow, rgba(16, 185, 129, 0.2));
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* =========================================================
+   Typography & Accents
+   ========================================================= */
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-jp {
+  font-family: var(--font-jp);
+}
+
+.font-serif-jp {
+  font-family: var(--font-serif-jp);
+}
+
+.text-gold-gradient {
+  background: linear-gradient(135deg, #fef08a 0%, #eab308 50%, #ca8a04 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-season-gradient {
+  background: linear-gradient(135deg, #ffffff 0%, var(--season-light) 60%, var(--season-primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* =========================================================
+   Seasonal Theme Variable Sets
+   ========================================================= */
+
+.season-spring {
+  --season-primary: #f43f5e;
+  --season-light: #fda4af;
+  --season-dark: #881337;
+  --season-bg-tint: rgba(244, 63, 94, 0.08);
+  --season-glow: rgba(244, 63, 94, 0.35);
+  --season-badge: #ffe4e6;
+  --season-badge-text: #9f1239;
+}
+
+.season-summer {
+  --season-primary: #f59e0b;
+  --season-light: #fde68a;
+  --season-dark: #78350f;
+  --season-bg-tint: rgba(245, 158, 11, 0.08);
+  --season-glow: rgba(245, 158, 11, 0.35);
+  --season-badge: #fef3c7;
+  --season-badge-text: #92400e;
+}
+
+.season-autumn {
+  --season-primary: #ea580c;
+  --season-light: #fed7aa;
+  --season-dark: #7c2d12;
+  --season-bg-tint: rgba(234, 88, 12, 0.08);
+  --season-glow: rgba(234, 88, 12, 0.35);
+  --season-badge: #ffedd5;
+  --season-badge-text: #9a3412;
+}
+
+.season-winter {
+  --season-primary: #0284c7;
+  --season-light: #bae6fd;
+  --season-dark: #082f49;
+  --season-bg-tint: rgba(2, 132, 199, 0.08);
+  --season-glow: rgba(2, 132, 199, 0.35);
+  --season-badge: #e0f2fe;
+  --season-badge-text: #075985;
+}
+
+/* =========================================================
+   Interactive Buttons & Controls
+   ========================================================= */
+
+.btn-zen-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.15rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  color: #030712;
+  background: linear-gradient(135deg, var(--season-light, #34d399) 0%, var(--season-primary, #10b981) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px -2px var(--season-glow, rgba(16, 185, 129, 0.35));
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-zen-primary:hover:not(:disabled) {
+  transform: translateY(-1.5px);
+  filter: brightness(1.08);
+  box-shadow: 0 8px 24px -2px var(--season-glow, rgba(16, 185, 129, 0.5));
+}
+
+.btn-zen-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-zen-secondary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  color: #e2e8f0;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-zen-secondary:hover:not(:disabled) {
+  background: rgba(51, 65, 85, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-zen-secondary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* =========================================================
+   Japanese Hanko / Stamp Visuals
+   ========================================================= */
+
+.hanko-stamp {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  border: 2.5px solid #dc2626;
+  color: #ef4444;
+  background: rgba(220, 38, 38, 0.08);
+  font-family: var(--font-serif-jp);
+  box-shadow:
+    inset 0 0 10px rgba(220, 38, 38, 0.2),
+    0 4px 12px rgba(220, 38, 38, 0.15);
+  user-select: none;
+}
+
+.hanko-stamp.unclaimed {
+  border: 2px dashed rgba(148, 163, 184, 0.3);
+  color: rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.4);
+  box-shadow: none;
+}
+
+.hanko-seal-outer {
+  position: relative;
+  padding: 4px;
+  border: 2px solid #ef4444;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* =========================================================
+   Interactive Map Nodes & Paths
+   ========================================================= */
+
+.map-node {
+  cursor: pointer;
+  transform-origin: center;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.map-node:hover {
+  filter: drop-shadow(0 0 8px var(--season-glow, rgba(16, 185, 129, 0.6)));
+  transform: scale(1.03);
+}
+
+.map-node.selected {
+  filter:
+    drop-shadow(0 0 14px var(--season-glow, rgba(16, 185, 129, 0.8)))
+    drop-shadow(0 0 4px #ffffff);
+}
+
+/* =========================================================
+   Print Stylesheet
+   ========================================================= */
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  .no-print,
+  nav,
+  header,
+  footer,
+  .particle-canvas,
+  button:not(.print-keep) {
+    display: none !important;
+  }
+
+  .glass-panel,
+  .glass-card {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    color: #0f172a !important;
+    backdrop-filter: none !important;
+  }
+
+  .text-season-gradient,
+  .text-gold-gradient {
+    -webkit-text-fill-color: #0f172a !important;
+    color: #0f172a !important;
+  }
+}
